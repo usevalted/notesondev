@@ -1,0 +1,167 @@
+vyapaarkaro — Project Context & Architecture Memory
+Last updated: 2026-05-28
+This file is the single source of truth for vyapaarkaro project context.
+AI assistants should read this file at the start of every session before making recommendations.
+AGREEMENT: In this file, "vyapaarkaro" means the actual project name. Replace "vyapaarkaro" with the real project name in all responses.
+1. Primary Goal
+Maximize backlinks and rank top in AI search results for queries like:
+"secured PDF converter"
+"convert bank statement to PDF"
+"convert passport to PDF"
+"convert medical records to PDF"
+"convert green card to PDF"
+"convert school certificate to PDF"
+"convert college certificate to PDF"
+Similar sensitive document conversion searches
+Core differentiator: Privacy-first, browser-native processing. Zero server contact for PDF tools.
+2. Founder & Business Context
+Founder based in India
+Building privacy-first browser-native PDF tools
+No venture capital, no surveillance business model
+Product Hunt launched early (not viable for relaunch now)
+AlternativeTo rejected submission (categorical ban on online PDF tools, not quality)
+3. Architecture — Critical Facts (NEVER ASSUME OTHERWISE)
+3.1 Processing Technology
+Pure JavaScript ONLY. No WebAssembly in any processing path.
+Core libraries: pdf.js, jsPDF, mammoth.js
+All conversion logic is pure JavaScript
+Any site references to "WebAssembly" are outdated and were removed from about.html, faq.html, llms.txt, llms-full.txt
+3.2 Library Loading
+Libraries load from CDN (NOT local files):
+Firebase 8.10.0 (sync, blocking)
+jspdf 2.5.1 (defer)
+pdf.js 3.11.174 (defer)
+mammoth 1.6.0 (defer)
+html2canvas 1.4.1 (defer)
+NO dynamic import(). All processing libraries download on every page load regardless of which tool is opened.
+App.js loads last after DOM
+Guards check typeof before conversion runs (toast if library not ready)
+3.3 Routing & SEO
+Custom history-API SPA inside app.js. No framework.
+getRoute() reads window.location.pathname
+setRoute() calls history.pushState
+renderAppState() is central dispatcher
+updateSeoMeta() does pathname map lookup and writes directly to DOM (canonical, description, og tags, h1)
+Tool switching uses .tool-tab elements with data-tool attributes
+3.4 HTML Structure
+Single-page app with auth modal, gallery vault, and PDF tool tabs
+app.html has robots meta noindex,follow intentionally (only accessible post-vault-login)
+Canonical tags use id="canonicalTag" for JS updates
+hreflang tags on some pages incorrectly list hi/es/ar pointing to same English URL — needs cleanup
+Inline script stripper removed from all pages, static canonical remains
+3.5 Service Worker / PWA
+NO service worker. No sw.js. No manifest.json. No PWA registration.
+Offline capability (Airplane Mode Test) works purely via standard browser HTTP cache of CDN-loaded libraries
+If browser cache is cleared between visits, libraries must re-download before offline use works again
+NOT an engineered PWA offline strategy
+3.6 HEIC Handling
+No separate HEIC library loaded
+Uses browser native createImageBitmap() or drawImage() on canvas
+Safari/iOS decodes HEIC natively
+Chrome/Firefox desktop may silently fail or produce blank pages (HEIC not natively supported)
+No WASM involved
+4. Vault Architecture (SERVER-TOUCHING — NOT ZERO-SERVER)
+4.1 Upload Flow
+User authenticates via Firebase Auth (email+password or Google OAuth)
+Session persistence is SESSION
+Email verification enforced — unverified users cannot access vault
+App calls POST /get-upload-url on Cloud Run backend with Firebase ID token
+Backend validates token and returns signed GCS PUT URL
+Client PUTs raw file directly to GCS using signed URL
+Files stored unencrypted at: User/{uid}/original/{timestamp}-{filename}
+4.2 Backend Logging
+ZERO explicit logging in success path. No filename, uid, fileSize, contentType logged.
+Only console.error(err) in catch blocks for /get-upload-url, delete-media, get-download-urls
+generate-thumbnail logs only emoji success messages ("✅ Image processed", "🚀 Video processed") and console.error
+No user data or filenames logged anywhere
+4.3 Thumbnail Generation
+generate-thumbnail Cloud Run service in asia-south1
+Downloads FULL file to /tmp/ for sharp/ffmpeg processing
+Only originalTemp is unlinkSync-ed
+Thumb/preview temp files (/tmp/thumb-, /tmp/preview-) NOT explicitly cleaned up — stay in /tmp/ until Cloud Run instance recycles
+4.4 GCS Retention
+NO lifecycle rules or auto-delete policy configured
+Files persist indefinitely until user deletes via vault UI
+ORPHAN GAP: If user deletes Firebase account without deleting vault files first, GCS objects become permanent orphans with no cleanup mechanism
+4.5 Critical Copy Issue
+vault.html FAQ schema claims "Files are encrypted before upload" — THIS IS FALSE
+Files go to GCS raw/unencrypted
+This contradicts actual architecture and creates legal exposure under DPDP
+5. Published Assets & URLs
+5.1 Domains (NEVER ASK AGAIN)
+WordPress: https://vyapaarkaro-wp.wordpress.com/
+Blogspot (English): https://vyapaarkaro-en.blogspot.com/
+Blogspot (German): https://vyapaarkaro-de.blogspot.com/
+Hashnode: https://vyapaarkaro-notes.hashnode.dev/
+Dev.to: dev.to/vyapaarkaro-dev
+GitHub: github.com/vyapaarkaro-org/vyapaarkaro-repo
+5.2 Canonical WordPress Article
+https://vyapaarkaro-wp.wordpress.com/2026/05/24/vyapaarkaro-vs-smallpdf-ilovepdf-adobe-a-privacy-first-architecture-comparison/
+5.3 Hashnode Article (AutoMod-safe version)
+https://vyapaarkaro-notes.hashnode.dev/i-analyzed-the-privacy-architecture-of-popular-pdf-tools-here-s-why-i-built-a-browser-first-alternative
+5.4 German Blogspot Article
+https://vyapaarkaro-de.blogspot.com/2026/05/warum-serverbasierte-pdf-tools-unter.html
+5.5 GitHub ADR-001
+docs/adr/001-why-browser-native-not-wasm.md
+5.6 GitHub Discussions
+Enabled with categories: Announcements (maintainer-only), Feature Requests, General, Polls, Privacy & Compliance, Q&A
+Community Guidelines pinned in Announcements
+6. Content Strategy Rules (ALWAYS FOLLOW)
+6.1 Publishing Schedule
+1 angle per week across 4 platforms:
+WordPress English: Monday
+German Blogspot: Wednesday
+Dev.to: Friday
+Hashnode: Sunday
+Spanish/Arabic paused until traction proven
+German has traction (22/59 articles with 1+ views)
+6.2 Article Rules
+ALL references 100% verified before inclusion
+No templated intros/outros
+No repeated Airplane Mode Test
+Citations required for YMYL claims
+Author box required
+Rotate internal links
+Title goes in WordPress title field only, NOT repeated as H1 in body
+For Dev.to: always set published: true in frontmatter
+Always ask user for explicit confirmation before writing/generating any article
+6.3 Audit Format Preference
+Single consolidated table with columns: Page Name, Recommendation, Impact (/10), Difficulty
+Do not split into multiple tables
+Avoid repeating completed recommendations across sessions
+7. robots.txt Status
+Cloudflare AI Crawl Control injects managed content for datacenter/server IPs
+User sees clean robots.txt from home IP
+Server-side IPs see AI-blocking injection (blocks ClaudeBot, GPTBot, Google-Extended, etc.)
+search=yes allows search indexing
+ai-train=no blocks AI training
+Sitemap present and allowed
+This may affect Google's crawl behavior
+8. SEO / Indexing Status
+Multiple pages stuck in Google Search Console "Discovered — currently not indexed"
+Adding more pages will NOT fix this — need external backlinks and authority signals
+Recommended: Request indexing manually in GSC for highest-value existing pages first
+Do NOT create new sensitive-document landing pages until existing pages are indexed
+9. Competitor Intelligence
+iLovePDF and Smallpdf have NO dedicated landing pages for "bank statement to PDF" or "passport to PDF"
+They rely on generic tool pages (/jpg_to_pdf) + blog posts for verticals
+Their blog strategy: industry-specific posts (medical professionals, banking OCR)
+OPPORTUNITY: Document-specific landing pages + blog posts can outrank them for sensitive document queries
+10. GitHub Roadmap (Pending)
+ADR-002: Client-Side-Only Architecture (no service worker network fallback)
+ADR-003: Zero Server Contact Verification Methodology
+SECURITY.md
+PRIVACY.md
+GitHub Releases with changelogs
+Migrate library loading from deferred script tags to dynamic import() per tool (future improvement noted in ADR-001)
+11. Critical Reminders for AI Assistants
+NEVER claim vyapaarkaro uses WebAssembly — it does NOT
+NEVER claim dynamic import() lazy loading — libraries load via deferred script tags
+NEVER claim files are encrypted before vault upload — they are NOT
+NEVER claim there is a service worker or PWA — there is NONE
+NEVER fabricate bundle sizes or performance metrics without verification
+ALWAYS ask for explicit confirmation before writing articles
+ALWAYS verify references 100% before inclusion in content
+ALWAYS filter recommendations through: "Does this improve backlinks or AI search ranking for sensitive document queries?"
+ALWAYS replace "vyapaarkaro" with the real project name in all responses
+End of context. Append new learnings below with date stamps.
