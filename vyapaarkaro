@@ -165,3 +165,113 @@ ALWAYS verify references 100% before inclusion in content
 ALWAYS filter recommendations through: "Does this improve backlinks or AI search ranking for sensitive document queries?"
 ALWAYS replace "vyapaarkaro" with the real project name in all responses
 End of context. Append new learnings below with date stamps.
+
+---
+
+## 2026-05-28 — ZeroCloudPDF Corrections & Clarifications
+
+- **GA4 Tracking ID:** `G-ESZCDHN3HT` — active on all pages and must be disclosed in privacy docs.
+- **Google Fonts:** `fonts.googleapis.com` and `fonts.gstatic.com` load on every page and must be disclosed.
+- **html2canvas:** Loads dynamically on demand only via `document.createElement('script')` when Word Image mode is selected. It is NOT loaded via deferred script tag. There is NO standalone Screenshot-to-PDF tool. html2canvas is used only in `wordToPdfImage()`.
+- **Vault Quota:** Enforces 25 MB free storage quota per account (`DEFAULT_FREE_QUOTA = 25 * 1024 * 1024`).
+- **Google Cloud DPA:** No separate Data Processing Agreement with Google Cloud exists.
+- **DPDP Grievance Officer:** Requires real name and Indian address for legal compliance under DPDP Act 2023.
+- **CDN Sources:** Only `cdnjs.cloudflare.com` and `gstatic.com` — not jsDelivr or unpkg.
+
+---
+
+## 2026-05-28 — Vault Fetch Calls
+
+- Vault-related `fetch()` calls are in `uploadSingle`, `loadGallery`, and the download confirm handler — including direct `fetch()` to signed GCS URLs.
+- There is no standalone `getUploadUrl` or `getDownloadUrls` function.
+
+---
+
+## 2026-05-28 — ADR-003 App.js Function Map
+
+Accurate `app.js` functions:
+- `wordToPdf()`
+- `wordToPdfImage()`
+- `mergePdfs()`
+- `pdfToImages()`
+- `finishPdf()`
+- `initPdfTool()`
+
+- `finishPdf()` uses `anchor.click()` (Safari), `window.open()` (Chrome/Firefox), or persistent button (iOS).
+- `initPdfTool()` dispatches via active ribbon tab `data-tool` attribute or pathname, not `_getRouteContext()`.
+
+---
+
+## 2026-05-28 — Published Competitor Comparison Articles
+
+Published competitor comparison articles:
+- WordPress: `zerocloudpdf.wordpress.com/2026/05/24/...architecture-comparison`
+- Blogspot English: `zerocloudpdf.blogspot.com/2026/05/...pdf24.html`
+- Hashnode: `zerocloudpdf.hashnode.dev/i-analyzed...browser-first-alternative`
+- German Blogspot reached 14+ views in 2 days.
+
+---
+
+## 2026-05-29 — Sitemap.xml Contents
+
+ZeroCloudPDF `sitemap.xml` contains:
+- homepage, about, faq, image-to-pdf, jpg-to-pdf, png-to-pdf, heic-to-pdf, compress-pdf, merge-pdf, word-to-pdf, pdf-to-jpg, pdf-to-png, vault, compress-pdf-iphone, blog, blog-how-browser-pdf-conversion-works, blog-hidden-privacy-risks-pdf-tools.
+
+No `/pdf` or `/pdf-merge` listed.
+
+---
+
+## 2026-05-31 — Bing vs Google Indexing Status
+
+ZeroCloudPDF pages `/terms`, `/faq`, `/about`, `/contact`, `/blog`, `/privacy` are not indexed on Bing but are indexed on Google.
+
+---
+
+## 2026-05-31 — Article Format Preference
+
+User prefers articles delivered in a split format: a live preview rendered inline for visual review, followed by a clean copy-pasteable HTML code block for direct Blogspot/WordPress pasting. Always present articles this way going forward.
+
+---
+
+## 2026-05-31 — Published Blogspot Audit Article
+
+Published Blogspot article: How to Audit Any PDF Tool for Privacy — `https://zerocloudpdf.blogspot.com/2026/05/how-to-audit-any-pdf-tool-for-privacy.html?m=1`
+
+---
+
+## 2026-06-01 — Public GitHub URL Rule
+
+ZeroCloudPDF public GitHub URL is `https://github.com/ZeroCloudPDF/ZeroCloudPDF/tree/main`. This is the only GitHub URL that should ever appear in public-facing content (blogs, articles, website). The internal private GitHub URL must never be used in any blog, article, or public content.
+
+**Clarified 2026-06-02:** The public repo is a showcase and backlinks repo for public-facing content only. The actual source code is private and not hosted there. Articles must never claim the public repo contains the "entire client-side codebase" or imply it is the actual source.
+
+---
+
+## 2026-06-01 — Published Website Blog: Bank Statements
+
+Published website blog: How to Convert Bank Statements to PDF Without Uploading Them to a Server — `https://zerocloudpdf.com/blog-convert-bank-statement-pdf-no-upload`
+
+---
+
+## 2026-06-02 — Content Generation Log
+
+User requested a WordPress article for 2026-06-01. Article delivered with rich HTML preview + code block format, title and tags separately. All external URLs validated before inclusion. No internal/private URLs in public content.
+
+---
+
+## 2026-06-02 — YouTube Shorts URL
+
+ZeroCloudPDF YouTube Shorts URL for embedding in articles: `https://youtube.com/shorts/lk34f7vTd0c?si=yavHk95LTwh70pvt`
+
+---
+
+## 2026-06-02 — URL Verification Rule
+
+Before writing any article, verify all URLs (internal and external) are working and accessible to avoid rework and broken links in published content.
+
+---
+
+## 2026-06-02 — Published WordPress Article: Sensitive Documents Deep Dive
+
+Published WordPress article: How to Convert Sensitive Documents to PDF Without Uploading Them to a Server — A Technical Deep Dive — `https://zerocloudpdf.wordpress.com/2026/06/02/how-to-convert-sensitive-documents-to-pdf-without-uploading-them-to-a-server-a-technical-deep-dive/`
+
