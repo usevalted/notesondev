@@ -1,277 +1,354 @@
-vyapaarkaro — Project Context & Architecture Memory
-Last updated: 2026-05-28
-This file is the single source of truth for vyapaarkaro project context.
+ZeroCloudPDF — Project Context & Architecture Memory
+Last updated: 2026-06-14
+This file is the single source of truth for ZeroCloudPDF project context.
 AI assistants should read this file at the start of every session before making recommendations.
-AGREEMENT: In this file, "vyapaarkaro" means the actual project name. Replace "vyapaarkaro" with the real project name in all responses.
+
+AGREEMENT: In this file, "vyapaarkaro" means the actual project name. Replace "vyapaarkaro" with "ZeroCloudPDF" in all responses.
+
+---
+
 1. Primary Goal
 Maximize backlinks and rank top in AI search results for queries like:
-"secured PDF converter"
-"convert bank statement to PDF"
-"convert passport to PDF"
-"convert medical records to PDF"
-"convert green card to PDF"
-"convert school certificate to PDF"
-"convert college certificate to PDF"
-Similar sensitive document conversion searches
+- "secured PDF converter"
+- "convert bank statement to PDF"
+- "convert passport to PDF"
+- "convert medical records to PDF"
+- "convert green card to PDF"
+- "convert school certificate to PDF"
+- "convert college certificate to PDF"
+- Similar sensitive document conversion searches
+
 Core differentiator: Privacy-first, browser-native processing. Zero server contact for PDF tools.
+
+---
+
 2. Founder & Business Context
-Founder based in India
-Building privacy-first browser-native PDF tools
-No venture capital, no surveillance business model
-Product Hunt launched early (not viable for relaunch now)
-AlternativeTo rejected submission (categorical ban on online PDF tools, not quality)
+- Founder based in India
+- Building privacy-first browser-native PDF tools
+- No venture capital, no surveillance business model
+- Product Hunt launched early (not viable for relaunch now)
+- AlternativeTo rejected submission (categorical ban on online PDF tools, not quality)
+
+---
+
 3. Architecture — Critical Facts (NEVER ASSUME OTHERWISE)
+
 3.1 Processing Technology
-Pure JavaScript ONLY. No WebAssembly in any processing path.
-Core libraries: pdf.js, jsPDF, mammoth.js
-All conversion logic is pure JavaScript
-Any site references to "WebAssembly" are outdated and were removed from about.html, faq.html, llms.txt, llms-full.txt
+- Pure JavaScript ONLY. No WebAssembly in any processing path.
+- Core libraries: pdf.js, jsPDF, mammoth.js
+- All conversion logic is pure JavaScript
+- Any site references to "WebAssembly" are outdated and were removed from about.html, faq.html, llms.txt, llms-full.txt
+
 3.2 Library Loading
-Libraries load from CDN (NOT local files):
-Firebase 8.10.0 (sync, blocking)
-jspdf 2.5.1 (defer)
-pdf.js 3.11.174 (defer)
-mammoth 1.6.0 (defer)
-html2canvas 1.4.1 (defer)
-NO dynamic import(). All processing libraries download on every page load regardless of which tool is opened.
-App.js loads last after DOM
-Guards check typeof before conversion runs (toast if library not ready)
-3.3 Routing & SEO
-Custom history-API SPA inside app.js. No framework.
-getRoute() reads window.location.pathname
-setRoute() calls history.pushState
-renderAppState() is central dispatcher
-updateSeoMeta() does pathname map lookup and writes directly to DOM (canonical, description, og tags, h1)
-Tool switching uses .tool-tab elements with data-tool attributes
-3.4 HTML Structure
-Single-page app with auth modal, gallery vault, and PDF tool tabs
-app.html has robots meta noindex,follow intentionally (only accessible post-vault-login)
-Canonical tags use id="canonicalTag" for JS updates
-hreflang tags on some pages incorrectly list hi/es/ar pointing to same English URL — needs cleanup
-Inline script stripper removed from all pages, static canonical remains
-3.5 Service Worker / PWA
-NO service worker. No sw.js. No manifest.json. No PWA registration.
-Offline capability (Airplane Mode Test) works purely via standard browser HTTP cache of CDN-loaded libraries
-If browser cache is cleared between visits, libraries must re-download before offline use works again
-NOT an engineered PWA offline strategy
-3.6 HEIC Handling
-No separate HEIC library loaded
-Uses browser native createImageBitmap() or drawImage() on canvas
-Safari/iOS decodes HEIC natively
-Chrome/Firefox desktop may silently fail or produce blank pages (HEIC not natively supported)
-No WASM involved
+- Libraries load from CDN (NOT local files):
+  - Firebase 8.10.0 (sync, blocking)
+  - jspdf 2.5.1 (defer)
+  - pdf.js 3.11.174 (defer)
+  - mammoth 1.6.0 (defer)
+  - html2canvas 1.4.1 (defer)
+- NO dynamic import(). All processing libraries download on every page load regardless of which tool is opened.
+- App.js loads last after DOM
+- Guards check typeof before conversion runs (toast if library not ready)
+
+3.3 html2canvas Exception
+- html2canvas loads dynamically on demand only via `document.createElement('script')` when Word Image mode is selected.
+- It is NOT loaded via deferred script tag.
+- There is NO standalone Screenshot-to-PDF tool.
+- html2canvas is used only in `wordToPdfImage()`.
+
+3.4 Routing & SEO
+- Custom history-API SPA inside app.js. No framework.
+- getRoute() reads window.location.pathname
+- setRoute() calls history.pushState
+- renderAppState() is central dispatcher
+- updateSeoMeta() does pathname map lookup and writes directly to DOM (canonical, description, og tags, h1)
+- Tool switching uses .tool-tab elements with data-tool attributes
+
+3.5 HTML Structure
+- Single-page app with auth modal, gallery vault, and PDF tool tabs
+- app.html has robots meta noindex,follow intentionally (only accessible post-vault-login)
+- Canonical tags use id="canonicalTag" for JS updates
+- hreflang tags on some pages incorrectly list hi/es/ar pointing to same English URL — needs cleanup
+- Inline script stripper removed from all pages, static canonical remains
+
+3.6 Service Worker / PWA
+- NO service worker. No sw.js. No manifest.json. No PWA registration.
+- Offline capability (Airplane Mode Test) works purely via standard browser HTTP cache of CDN-loaded libraries
+- If browser cache is cleared between visits, libraries must re-download before offline use works again
+- NOT an engineered PWA offline strategy
+
+3.7 HEIC Handling
+- No separate HEIC library loaded
+- Uses browser native createImageBitmap() or drawImage() on canvas
+- Safari/iOS decodes HEIC natively
+- Chrome/Firefox desktop may silently fail or produce blank pages (HEIC not natively supported)
+- No WASM involved
+
+3.8 CDN Sources
+- Only cdnjs.cloudflare.com and gstatic.com — not jsDelivr or unpkg.
+
+---
+
 4. Vault Architecture (SERVER-TOUCHING — NOT ZERO-SERVER)
+
 4.1 Upload Flow
-User authenticates via Firebase Auth (email+password or Google OAuth)
-Session persistence is SESSION
-Email verification enforced — unverified users cannot access vault
-App calls POST /get-upload-url on Cloud Run backend with Firebase ID token
-Backend validates token and returns signed GCS PUT URL
-Client PUTs raw file directly to GCS using signed URL
-Files stored unencrypted at: User/{uid}/original/{timestamp}-{filename}
+- User authenticates via Firebase Auth (email+password or Google OAuth)
+- Session persistence is SESSION
+- Email verification enforced — unverified users cannot access vault
+- App calls POST /get-upload-url on Cloud Run backend with Firebase ID token
+- Backend validates token and returns signed GCS PUT URL
+- Client PUTs raw file directly to GCS using signed URL
+- Files stored unencrypted at: User/{uid}/original/{timestamp}-{filename}
+
 4.2 Backend Logging
-ZERO explicit logging in success path. No filename, uid, fileSize, contentType logged.
-Only console.error(err) in catch blocks for /get-upload-url, delete-media, get-download-urls
-generate-thumbnail logs only emoji success messages ("✅ Image processed", "🚀 Video processed") and console.error
-No user data or filenames logged anywhere
+- ZERO explicit logging in success path. No filename, uid, fileSize, contentType logged.
+- Only console.error(err) in catch blocks for /get-upload-url, delete-media, get-download-urls
+- generate-thumbnail logs only emoji success messages ("Image processed", "Video processed") and console.error
+- No user data or filenames logged anywhere
+
 4.3 Thumbnail Generation
-generate-thumbnail Cloud Run service in asia-south1
-Downloads FULL file to /tmp/ for sharp/ffmpeg processing
-Only originalTemp is unlinkSync-ed
-Thumb/preview temp files (/tmp/thumb-, /tmp/preview-) NOT explicitly cleaned up — stay in /tmp/ until Cloud Run instance recycles
+- generate-thumbnail Cloud Run service in asia-south1
+- Downloads FULL file to /tmp/ for sharp/ffmpeg processing
+- Only originalTemp is unlinkSync-ed
+- Thumb/preview temp files (/tmp/thumb-, /tmp/preview-) NOT explicitly cleaned up — stay in /tmp/ until Cloud Run instance recycles
+
 4.4 GCS Retention
-NO lifecycle rules or auto-delete policy configured
-Files persist indefinitely until user deletes via vault UI
-ORPHAN GAP: If user deletes Firebase account without deleting vault files first, GCS objects become permanent orphans with no cleanup mechanism
-4.5 Critical Copy Issue
-vault.html FAQ schema claims "Files are encrypted before upload" — THIS IS FALSE
-Files go to GCS raw/unencrypted
-This contradicts actual architecture and creates legal exposure under DPDP
+- NO lifecycle rules or auto-delete policy configured
+- Files persist indefinitely until user deletes via vault UI
+- ORPHAN GAP: If user deletes Firebase account without deleting vault files first, GCS objects become permanent orphans with no cleanup mechanism
+
+4.5 Vault Quota
+- Enforces 25 MB free storage quota per account (DEFAULT_FREE_QUOTA = 25 * 1024 * 1024)
+
+4.6 Vault Fetch Calls
+- Vault-related fetch() calls are in uploadSingle, loadGallery, and the download confirm handler — including direct fetch() to signed GCS URLs.
+- There is no standalone getUploadUrl or getDownloadUrls function.
+
+4.7 Critical Copy Issue
+- vault.html FAQ schema claims "Files are encrypted before upload" — THIS IS FALSE
+- Files go to GCS raw/unencrypted
+- This contradicts actual architecture and creates legal exposure under DPDP
+
+---
+
 5. Published Assets & URLs
+
 5.1 Domains (NEVER ASK AGAIN)
-WordPress: https://vyapaarkaro-wp.wordpress.com/
-Blogspot (English): https://vyapaarkaro-en.blogspot.com/
-Blogspot (German): https://vyapaarkaro-de.blogspot.com/
-Hashnode: https://vyapaarkaro-notes.hashnode.dev/
-Dev.to: dev.to/vyapaarkaro-dev
-GitHub: github.com/vyapaarkaro-org/vyapaarkaro-repo
-5.2 Canonical WordPress Article
-https://vyapaarkaro-wp.wordpress.com/2026/05/24/vyapaarkaro-vs-smallpdf-ilovepdf-adobe-a-privacy-first-architecture-comparison/
-5.3 Hashnode Article (AutoMod-safe version)
-https://vyapaarkaro-notes.hashnode.dev/i-analyzed-the-privacy-architecture-of-popular-pdf-tools-here-s-why-i-built-a-browser-first-alternative
-5.4 German Blogspot Article
-https://vyapaarkaro-de.blogspot.com/2026/05/warum-serverbasierte-pdf-tools-unter.html
-5.5 GitHub ADR-001
-docs/adr/001-why-browser-native-not-wasm.md
-5.6 GitHub Discussions
-Enabled with categories: Announcements (maintainer-only), Feature Requests, General, Polls, Privacy & Compliance, Q&A
-Community Guidelines pinned in Announcements
+- WordPress: https://zerocloudpdf.wordpress.com/
+- Blogspot (English): https://zerocloudpdf.blogspot.com/
+- Blogspot (German): https://zerocloudpdf.blogspot.com/ (German posts are sub-pages under the same blog)
+- Hashnode: https://zerocloudpdf.hashnode.dev/
+- Dev.to: dev.to/vyapaarkaro-dev (legacy, not actively used)
+- GitHub Public: https://github.com/ZeroCloudPDF/ZeroCloudPDF/tree/main
+
+5.2 Public GitHub URL Rule
+- The public repo is a showcase and backlinks repo for public-facing content only.
+- The actual source code is private and not hosted there.
+- Articles must never claim the public repo contains the "entire client-side codebase" or imply it is the actual source.
+
+5.3 GA4 Tracking
+- GA4 Tracking ID: G-ESZCDHN3HT — active on all pages and must be disclosed in privacy docs.
+- Google Fonts: fonts.googleapis.com and fonts.gstatic.com load on every page and must be disclosed.
+
+5.4 Google Cloud DPA
+- No separate Data Processing Agreement with Google Cloud exists.
+
+5.5 DPDP Grievance Officer
+- Requires real name and Indian address for legal compliance under DPDP Act 2023.
+
+---
+
 6. Content Strategy Rules (ALWAYS FOLLOW)
+
 6.1 Publishing Schedule
-1 angle per week across 4 platforms:
-WordPress English: Monday
-German Blogspot: Wednesday
-Dev.to: Friday
-Hashnode: Sunday
-Spanish/Arabic paused until traction proven
-German has traction (22/59 articles with 1+ views)
+- 1 angle per week across 4 platforms:
+  - WordPress English: Monday
+  - German Blogspot: Wednesday
+  - Dev.to: Friday
+  - Hashnode: Sunday
+- Spanish/Arabic paused until traction proven
+- German has traction (22/59 articles with 1+ views)
+
 6.2 Article Rules
-ALL references 100% verified before inclusion
-No templated intros/outros
-No repeated Airplane Mode Test
-Citations required for YMYL claims
-Author box required
-Rotate internal links
-Title goes in WordPress title field only, NOT repeated as H1 in body
-For Dev.to: always set published: true in frontmatter
-Always ask user for explicit confirmation before writing/generating any article
-6.3 Audit Format Preference
-Single consolidated table with columns: Page Name, Recommendation, Impact (/10), Difficulty
-Do not split into multiple tables
-Avoid repeating completed recommendations across sessions
+- ALL references 100% verified before inclusion
+- No templated intros/outros
+- No repeated Airplane Mode Test
+- Citations required for YMYL claims
+- Author box required
+- Rotate internal links
+- Title goes in WordPress title field only, NOT repeated as H1 in body
+- For Dev.to: always set published: true in frontmatter
+- Always ask user for explicit confirmation before writing/generating any article
+- No infographics in any blog articles — use only clean text, tables, and CSS-styled boxes
+- No emojis like planes, rockets, or similar icons — use plain text headings only
+- CSS themes must match ZeroCloudPDF site colors, not red (#e94560)
+- Competitor comparisons must use CSS-styled HTML tables, not plain text tables
+- When a YouTube link is included, it must be embedded as a clickable video thumbnail or iframe-style embed
+- Only name-check iLovePDF, Smallpdf, and PDF24 as competitors
+- All competitor claims must be publicly verifiable facts — never fabricated
+- User counts all characters including commas, full stops, and spaces for Blogspot tags (200 char limit) and search description (150 char limit)
+- Always verify exact character count before sharing
+- User prefers tags and description in a clean command prompt / code block format for easy copy-paste
+- User prefers all articles delivered in preview + command prompt style: a clean text preview first, followed by the full HTML in a code block for easy copy-paste
+
+6.3 Article Format Preference
+- User prefers articles delivered in a split format: a live preview rendered inline for visual review, followed by a clean copy-pasteable HTML code block for direct Blogspot/WordPress pasting.
+
+6.4 Audit Format Preference
+- Single consolidated table with columns: Page Name, Recommendation, Impact (/10), Difficulty
+- Do not split into multiple tables
+- Avoid repeating completed recommendations across sessions
+
+---
+
 7. robots.txt Status
-Cloudflare AI Crawl Control injects managed content for datacenter/server IPs
-User sees clean robots.txt from home IP
-Server-side IPs see AI-blocking injection (blocks ClaudeBot, GPTBot, Google-Extended, etc.)
-search=yes allows search indexing
-ai-train=no blocks AI training
-Sitemap present and allowed
-This may affect Google's crawl behavior
+- Cloudflare AI Crawl Control injects managed content for datacenter/server IPs
+- User sees clean robots.txt from home IP
+- Server-side IPs see AI-blocking injection (blocks ClaudeBot, GPTBot, Google-Extended, etc.)
+- search=yes allows search indexing
+- ai-train=no blocks AI training
+- Sitemap present and allowed
+- This may affect Google's crawl behavior
+
+---
+
 8. SEO / Indexing Status
-Multiple pages stuck in Google Search Console "Discovered — currently not indexed"
-Adding more pages will NOT fix this — need external backlinks and authority signals
-Recommended: Request indexing manually in GSC for highest-value existing pages first
-Do NOT create new sensitive-document landing pages until existing pages are indexed
+
+8.1 Google
+- Multiple pages stuck in Google Search Console "Discovered — currently not indexed"
+- Adding more pages will NOT fix this — need external backlinks and authority signals
+- Recommended: Request indexing manually in GSC for highest-value existing pages first
+- Do NOT create new sensitive-document landing pages until existing pages are indexed
+- As of 2026-06-02, /image-to-pdf, /faq, and /jpg-to-pdf are indexed in Google
+- /jpg-to-pdf was updated on 2026-06-02
+
+8.2 Bing
+- As of 2026-05-31: /terms, /faq, /about, /contact, /blog, /privacy are not indexed on Bing but are indexed on Google
+
+8.3 Backlinks (Bing, as of 2026-06-06)
+- zerocloudpdf.com/ = 21 backlinks
+- /merge-pdf = 5
+- /compress-pdf = 6
+- /word-to-pdf = 1
+- /pdf-to-png = 1
+- All other pages (/vault, /png-to-pdf, /pdf-to-jpg, /compress-pdf-iphone, /blog-how-browser-pdf-conversion-works, /jpg-to-pdf, /heic-to-pdf) have 0 backlinks
+- Total tool page backlinks = 13, concentrated on homepage (21)
+
+---
+
 9. Competitor Intelligence
-iLovePDF and Smallpdf have NO dedicated landing pages for "bank statement to PDF" or "passport to PDF"
-They rely on generic tool pages (/jpg_to_pdf) + blog posts for verticals
-Their blog strategy: industry-specific posts (medical professionals, banking OCR)
-OPPORTUNITY: Document-specific landing pages + blog posts can outrank them for sensitive document queries
-10. GitHub Roadmap (Pending)
-ADR-002: Client-Side-Only Architecture (no service worker network fallback)
-ADR-003: Zero Server Contact Verification Methodology
-SECURITY.md
-PRIVACY.md
-GitHub Releases with changelogs
-Migrate library loading from deferred script tags to dynamic import() per tool (future improvement noted in ADR-001)
-11. Critical Reminders for AI Assistants
-NEVER claim vyapaarkaro uses WebAssembly — it does NOT
-NEVER claim dynamic import() lazy loading — libraries load via deferred script tags
-NEVER claim files are encrypted before vault upload — they are NOT
-NEVER claim there is a service worker or PWA — there is NONE
-NEVER fabricate bundle sizes or performance metrics without verification
-ALWAYS ask for explicit confirmation before writing articles
-ALWAYS verify references 100% before inclusion in content
-ALWAYS filter recommendations through: "Does this improve backlinks or AI search ranking for sensitive document queries?"
-ALWAYS replace "vyapaarkaro" with the real project name in all responses
+- iLovePDF and Smallpdf have NO dedicated landing pages for "bank statement to PDF" or "passport to PDF"
+- They rely on generic tool pages (/jpg_to_pdf) + blog posts for verticals
+- Their blog strategy: industry-specific posts (medical professionals, banking OCR)
+- OPPORTUNITY: Document-specific landing pages + blog posts can outrank them for sensitive document queries
+- Only name-check iLovePDF, Smallpdf, and PDF24 in content
+- All competitor claims must be publicly verifiable facts
+
+---
+
+10. GitHub Roadmap & ADRs
+
+10.1 Completed ADRs
+- ADR-001: Why Browser-Native, Not WASM — docs/adr/001-why-browser-native-not-wasm.md
+- ADR-002: Client-Side-Only Architecture — COMPLETE and published at https://github.com/ZeroCloudPDF/ZeroCloudPDF/tree/main/docs/adr/
+- ADR-003: Zero Server Contact Verification Methodology — COMPLETE and published at https://github.com/ZeroCloudPDF/ZeroCloudPDF/tree/main/docs/adr/
+- Do NOT recommend writing ADR-002 or ADR-003 again.
+
+10.2 Pending
+- SECURITY.md
+- PRIVACY.md
+- GitHub Releases with changelogs
+- Migrate library loading from deferred script tags to dynamic import() per tool (future improvement noted in ADR-001)
+
+---
+
+11. Site Pages & Sitemap
+
+11.1 Tool Pages (lastmod 2026-05-16 to 2026-06-11)
+- /, /about, /faq, /privacy, /terms, /contact
+- /image-to-pdf, /jpg-to-pdf, /png-to-pdf, /heic-to-pdf
+- /compress-pdf, /merge-pdf, /word-to-pdf
+- /pdf-to-jpg, /pdf-to-png
+- /vault, /compress-pdf-iphone
+
+11.2 Blog Pages (lastmod 2026-05-23 to 2026-06-13)
+- /blog
+- /blog-compress-pdf-iphone-no-app
+- /blog-how-browser-pdf-conversion-works
+- /blog-hidden-privacy-risks-pdf-tools
+- /blog-convert-bank-statement-pdf-no-upload
+- /blog-image-to-pdf-under-60-seconds
+- /blog-pdf-tools-india-dpdp-act
+- /blog-pdf-tools-medical-records
+
+11.3 Sitemap Rule
+- When user asks for ZeroCloudPDF site URLs, always fetch sitemap.xml freshly from zerocloudpdf.com/sitemap.xml and return the latest URLs, never rely on cached memory.
+
+---
+
+12. Published Articles & Assets
+
+12.1 WordPress
+- 2026-05-24: ZeroCloudPDF vs Smallpdf/iLovePDF/Adobe — A Privacy-First Architecture Comparison
+  https://zerocloudpdf.wordpress.com/2026/05/24/vyapaarkaro-vs-smallpdf-ilovepdf-adobe-a-privacy-first-architecture-comparison/
+- 2026-06-02: How to Convert Sensitive Documents to PDF Without Uploading Them to a Server — A Technical Deep Dive
+  https://zerocloudpdf.wordpress.com/2026/06/02/how-to-convert-sensitive-documents-to-pdf-without-uploading-them-to-a-server-a-technical-deep-dive/
+- 2026-06-13: Convert PDF Under 60 Seconds — No Server Upload
+  https://zerocloudpdf.wordpress.com/2026/06/13/convert-pdf-under-60-seconds-no-server-upload/
+
+12.2 Blogspot (English)
+- 2026-05-24: How to Audit Any PDF Tool for Privacy
+  https://zerocloudpdf.blogspot.com/2026/05/how-to-audit-any-pdf-tool-for-privacy.html
+- 2026-06-08: How to Use ZeroCloudPDF in Airplane Mode
+  https://zerocloudpdf.blogspot.com/2026/06/how-to-use-zerocloudpdf-in-airplane.html
+- 2026-06-13: Fact Check: Do You Really Need to Upload Your PDF to a Server Just to Convert It to JPG?
+  https://zerocloudpdf.blogspot.com/2026/06/fact-check-do-you-really-need-to-upload.html
+
+12.3 Blogspot (German)
+- 2026-06-08: ZeroCloudPDF im Flugmodus nutzen
+  https://zerocloudpdf.blogspot.com/2026/06/zerocloudpdf-im-flugmodus-nutzen-der.html
+- 2026-06-13: Faktencheck: Muss man seine PDFs wirklich auf einen Server hochladen, um sie in JPG zu konvertieren?
+  https://zerocloudpdf.blogspot.com/2026/06/faktencheck-muss-man-seine-pdfs.html
+- German Blogspot article in progress (HEIC-to-PDF): "HEIC zu PDF konvertieren ohne Server-Upload: Die sicherste Browser-Methode für iPhone & Datenschutz 2026"
+  - German-specific DSGVO and Datensparsamkeit angles
+  - Only verified URLs used
+  - No infographics
+
+12.4 Hashnode
+- 2026-05-24: I Analyzed the Privacy Architecture of Popular PDF Tools — Here's Why I Built a Browser-First Alternative
+  https://zerocloudpdf.hashnode.dev/i-analyzed-the-privacy-architecture-of-popular-pdf-tools-here-s-why-i-built-a-browser-first-alternative
+
+12.5 External Links in README (verified working as of 2026-06-02)
+- WordPress architecture comparison
+- German Blogspot comparison
+- Hashnode founder narrative
+- Do not suggest checking these again.
+
+---
+
+13. YouTube Shorts
+- Airplane Mode Test: https://youtube.com/shorts/lk34f7vTd0c?si=yavHk95LTwh70pvt
+- Merge PDF Airplane Mode: https://youtube.com/shorts/AJsOv5v49TY?si=SKCeCNb4tQoVueZ0
+- Image to PDF 60s Challenge (71MB → 21MB, 70% saving): https://youtube.com/shorts/XNXMWGOxCOo?si=TgLxuHKOVOeR9-Q4
+- Aadhaar & PAN to PDF 60s Challenge (4.7MB → 0.4MB, 90% saving): https://youtube.com/shorts/GLBPzTEWuxI?si=rDjaxXkdNJPmi5U2
+
+---
+
+14. Critical Reminders for AI Assistants
+- NEVER claim ZeroCloudPDF uses WebAssembly — it does NOT
+- NEVER claim dynamic import() lazy loading — libraries load via deferred script tags
+- NEVER claim files are encrypted before vault upload — they are NOT
+- NEVER claim there is a service worker or PWA — there is NONE
+- NEVER fabricate bundle sizes or performance metrics without verification
+- NEVER use the internal GitHub URL in any public-facing content
+- ALWAYS ask for explicit confirmation before writing articles
+- ALWAYS verify references 100% before inclusion in content
+- ALWAYS verify all URLs are working before writing any article
+- ALWAYS filter recommendations through: "Does this improve backlinks or AI search ranking for sensitive document queries?"
+- ALWAYS replace "vyapaarkaro" with "ZeroCloudPDF" in all responses
+- ALWAYS fetch sitemap.xml freshly when asked for site URLs
+- ALWAYS use main site tool links (not blog links) when linking to tools in articles
+
+---
+
 End of context. Append new learnings below with date stamps.
-
----
-
-## 2026-05-28 — ZeroCloudPDF Corrections & Clarifications
-
-- **GA4 Tracking ID:** `G-ESZCDHN3HT` — active on all pages and must be disclosed in privacy docs.
-- **Google Fonts:** `fonts.googleapis.com` and `fonts.gstatic.com` load on every page and must be disclosed.
-- **html2canvas:** Loads dynamically on demand only via `document.createElement('script')` when Word Image mode is selected. It is NOT loaded via deferred script tag. There is NO standalone Screenshot-to-PDF tool. html2canvas is used only in `wordToPdfImage()`.
-- **Vault Quota:** Enforces 25 MB free storage quota per account (`DEFAULT_FREE_QUOTA = 25 * 1024 * 1024`).
-- **Google Cloud DPA:** No separate Data Processing Agreement with Google Cloud exists.
-- **DPDP Grievance Officer:** Requires real name and Indian address for legal compliance under DPDP Act 2023.
-- **CDN Sources:** Only `cdnjs.cloudflare.com` and `gstatic.com` — not jsDelivr or unpkg.
-
----
-
-## 2026-05-28 — Vault Fetch Calls
-
-- Vault-related `fetch()` calls are in `uploadSingle`, `loadGallery`, and the download confirm handler — including direct `fetch()` to signed GCS URLs.
-- There is no standalone `getUploadUrl` or `getDownloadUrls` function.
-
----
-
-## 2026-05-28 — ADR-003 App.js Function Map
-
-Accurate `app.js` functions:
-- `wordToPdf()`
-- `wordToPdfImage()`
-- `mergePdfs()`
-- `pdfToImages()`
-- `finishPdf()`
-- `initPdfTool()`
-
-- `finishPdf()` uses `anchor.click()` (Safari), `window.open()` (Chrome/Firefox), or persistent button (iOS).
-- `initPdfTool()` dispatches via active ribbon tab `data-tool` attribute or pathname, not `_getRouteContext()`.
-
----
-
-## 2026-05-28 — Published Competitor Comparison Articles
-
-Published competitor comparison articles:
-- WordPress: `zerocloudpdf.wordpress.com/2026/05/24/...architecture-comparison`
-- Blogspot English: `zerocloudpdf.blogspot.com/2026/05/...pdf24.html`
-- Hashnode: `zerocloudpdf.hashnode.dev/i-analyzed...browser-first-alternative`
-- German Blogspot reached 14+ views in 2 days.
-
----
-
-## 2026-05-29 — Sitemap.xml Contents
-
-ZeroCloudPDF `sitemap.xml` contains:
-- homepage, about, faq, image-to-pdf, jpg-to-pdf, png-to-pdf, heic-to-pdf, compress-pdf, merge-pdf, word-to-pdf, pdf-to-jpg, pdf-to-png, vault, compress-pdf-iphone, blog, blog-how-browser-pdf-conversion-works, blog-hidden-privacy-risks-pdf-tools.
-
-No `/pdf` or `/pdf-merge` listed.
-
----
-
-## 2026-05-31 — Bing vs Google Indexing Status
-
-ZeroCloudPDF pages `/terms`, `/faq`, `/about`, `/contact`, `/blog`, `/privacy` are not indexed on Bing but are indexed on Google.
-
----
-
-## 2026-05-31 — Article Format Preference
-
-User prefers articles delivered in a split format: a live preview rendered inline for visual review, followed by a clean copy-pasteable HTML code block for direct Blogspot/WordPress pasting. Always present articles this way going forward.
-
----
-
-## 2026-05-31 — Published Blogspot Audit Article
-
-Published Blogspot article: How to Audit Any PDF Tool for Privacy — `https://zerocloudpdf.blogspot.com/2026/05/how-to-audit-any-pdf-tool-for-privacy.html?m=1`
-
----
-
-## 2026-06-01 — Public GitHub URL Rule
-
-ZeroCloudPDF public GitHub URL is `https://github.com/ZeroCloudPDF/ZeroCloudPDF/tree/main`. This is the only GitHub URL that should ever appear in public-facing content (blogs, articles, website). The internal private GitHub URL must never be used in any blog, article, or public content.
-
-**Clarified 2026-06-02:** The public repo is a showcase and backlinks repo for public-facing content only. The actual source code is private and not hosted there. Articles must never claim the public repo contains the "entire client-side codebase" or imply it is the actual source.
-
----
-
-## 2026-06-01 — Published Website Blog: Bank Statements
-
-Published website blog: How to Convert Bank Statements to PDF Without Uploading Them to a Server — `https://zerocloudpdf.com/blog-convert-bank-statement-pdf-no-upload`
-
----
-
-## 2026-06-02 — Content Generation Log
-
-User requested a WordPress article for 2026-06-01. Article delivered with rich HTML preview + code block format, title and tags separately. All external URLs validated before inclusion. No internal/private URLs in public content.
-
----
-
-## 2026-06-02 — YouTube Shorts URL
-
-ZeroCloudPDF YouTube Shorts URL for embedding in articles: `https://youtube.com/shorts/lk34f7vTd0c?si=yavHk95LTwh70pvt`
-
----
-
-## 2026-06-02 — URL Verification Rule
-
-Before writing any article, verify all URLs (internal and external) are working and accessible to avoid rework and broken links in published content.
-
----
-
-## 2026-06-02 — Published WordPress Article: Sensitive Documents Deep Dive
-
-Published WordPress article: How to Convert Sensitive Documents to PDF Without Uploading Them to a Server — A Technical Deep Dive — `https://zerocloudpdf.wordpress.com/2026/06/02/how-to-convert-sensitive-documents-to-pdf-without-uploading-them-to-a-server-a-technical-deep-dive/`
-
